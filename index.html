@@ -306,6 +306,8 @@
 
         // --- FIREBASE ACCOUNT LOGIC LINKS ---
 
+        // --- FIREBASE ACCOUNT LOGIC LINKS ---
+
         function handleGoogleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider)
@@ -337,13 +339,18 @@
                 .catch((error) => alert("Login error: " + error.message));
         }
 
+        // REPAIRED SIGN OUT MECHANISM
         function handleSignOut() {
-            if(confirm("Sign out? Data won't cloud-sync until you log back in.")) {
+            if (confirm("Sign out? Data won't cloud-sync until you log back in.")) {
+                // Set a temporary flag so the auth listener knows not to overwrite anything during teardown
+                sessionStorage.setItem('is_logging_out_active_flag', 'true');
+
                 auth.signOut().then(() => {
-                    // 1. Completely wipe the local storage memory slot
+                    // Clear the browser local storage backup
                     localStorage.removeItem('ap_planner_v1_data');
-                    
-                    // 2. Clear out the active memory variables entirely
+                    localStorage.removeItem('ap_sustained_investigation_v2');
+
+                    // Reset variables to blank states
                     appData = {
                         folders: [
                             {
@@ -358,11 +365,12 @@
                     currentOpenFolderId = null;
                     activeSlotKey = null;
 
-                    // 3. Clear out the Sustained Investigation text box memory
-                    localStorage.removeItem('ap_sustained_investigation_v2');
-
-                    // 4. Force a clean page refresh to reset the UI completely
+                    // Remove the flag and refresh cleanly
+                    sessionStorage.removeItem('is_logging_out_active_flag');
                     location.reload();
+                }).catch((error) => {
+                    console.error("Sign out error:", error);
+                    sessionStorage.removeItem('is_logging_out_active_flag');
                 });
             }
         }
@@ -374,6 +382,11 @@
             const userDisplay = document.getElementById('user-display-email');
 
             if (!authContainer) return;
+
+            // Safety catch: If we are in the middle of logging out, freeze all sync updates to prevent corruption
+            if (sessionStorage.getItem('is_logging_out_active_flag') === 'true') {
+                return;
+            }
 
             if (user) {
                 authContainer.classList.add('hidden');
@@ -388,17 +401,18 @@
                             console.log("☁️ Data successfully downloaded from Firestore!");
                             renderFileSystemViewCanvas();
                         } else {
-                            // If cloud is empty, scan for existing offline work to migrate safely
+                            // If cloud database is empty, see if they had work in progress offline to migrate
                             const localRaw = localStorage.getItem('ap_planner_v1_data');
                             if (localRaw) {
                                 try {
                                     const localData = JSON.parse(localRaw);
                                     if (localData.folders && localData.folders.length > 0) {
                                         appData = localData;
-                                        console.log("🌱 Migrating your offline folders to your new profile container...");
+                                        console.log("🌱 Migrating your offline folders to your cloud account...");
                                     }
                                 } catch(e) { console.error(e); }
                             }
+                            // Lock it down to the database immediately
                             saveAllStateData();
                             renderFileSystemViewCanvas();
                         }
@@ -408,7 +422,7 @@
                 authContainer.classList.remove('hidden');
                 userBar.classList.add('hidden');
                 
-                // Load local configuration keys for unsigned users
+                // For signed-out guests, look for basic local storage defaults
                 loadAllStateData();
                 renderFileSystemViewCanvas();
             }
