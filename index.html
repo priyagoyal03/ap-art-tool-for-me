@@ -703,25 +703,9 @@
         }, index * 400); // 400ms interval staging prevents browser window lockups
     });
 }
+        
 
-            html2canvas(targetElement, options).then((canvas) => {
-                const imagePayload = canvas.toDataURL("image/png");
-                const downloadAnchor = document.createElement('a');
-                
-                const folder = appData.folders.find(f => f.id === currentOpenFolderId);
-                const folderName = folder ? folder.name.replace(/\s+/g, '_') : 'AP_Art_Workspace';
-                
-                downloadAnchor.download = `${folderName}_portfolio_grid.png`;
-                downloadAnchor.href = imagePayload;
-                
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                document.body.removeChild(downloadAnchor);
-            }).catch(err => {
-                console.error(err);
-                alert("Compilation failed compiling canvas layout assets into PNG.");
-            });
-        }
+
         
         function renderFileSystemViewCanvas() {
             const canvas = document.getElementById('directory-canvas-view');
