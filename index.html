@@ -384,9 +384,9 @@
                     .then((doc) => {
                         if (doc.exists && doc.data().userData) {
                             appData = doc.data().userData;
-                            // Ensure default folder inherits 215 count from synced records if needed
+                            // Ensure default folder inherits 15 count from synced records if needed
                             const defaultFolder = appData.folders.find(f => f.id === "ap-portfolio-default-system-id");
-                            if (defaultFolder) defaultFolder.maxSlots = 215;
+                            if (defaultFolder) defaultFolder.maxSlots = 15;
                         } else {
                             loadLocalFallback();
                             saveAllStateData();
@@ -399,9 +399,9 @@
                 authContainer.classList.remove('hidden');
                 userBar.classList.add('hidden');
                 loadLocalFallback();
-                // Ensure default folder local fallback layout inherits 215 count
+                // Ensure default folder local fallback layout inherits 15 count
                 const defaultFolder = appData.folders.find(f => f.id === "ap-portfolio-default-system-id");
-                if (defaultFolder) defaultFolder.maxSlots = 215;
+                if (defaultFolder) defaultFolder.maxSlots = 15;
                 syncInvestigationUI();
                 renderFileSystemViewCanvas();
             }
