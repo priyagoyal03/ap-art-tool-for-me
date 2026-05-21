@@ -288,8 +288,9 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // 3. Global Datasets Architecture 
+       // 3. Global Datasets Architecture 
         let appData = {
+            sustainedInvestigation: "", // NEW: Unified tracking inside cloud dataset
             folders: [
                 {
                     id: "ap-portfolio-default-system-id",
@@ -303,8 +304,6 @@
 
         let currentOpenFolderId = null; 
         let activeSlotKey = null;
-
-        // --- FIREBASE ACCOUNT LOGIC LINKS ---
 
         // --- FIREBASE ACCOUNT LOGIC LINKS ---
 
@@ -342,16 +341,13 @@
         // REPAIRED SIGN OUT MECHANISM
         function handleSignOut() {
             if (confirm("Sign out? Data won't cloud-sync until you log back in.")) {
-                // Set a temporary flag so the auth listener knows not to overwrite anything during teardown
                 sessionStorage.setItem('is_logging_out_active_flag', 'true');
 
                 auth.signOut().then(() => {
-                    // Clear the browser local storage backup
                     localStorage.removeItem('ap_planner_v1_data');
-                    localStorage.removeItem('ap_sustained_investigation_v2');
 
-                    // Reset variables to blank states
                     appData = {
+                        sustainedInvestigation: "",
                         folders: [
                             {
                                 id: "ap-portfolio-default-system-id",
@@ -365,7 +361,6 @@
                     currentOpenFolderId = null;
                     activeSlotKey = null;
 
-                    // Remove the flag and refresh cleanly
                     sessionStorage.removeItem('is_logging_out_active_flag');
                     location.reload();
                 }).catch((error) => {
@@ -383,7 +378,6 @@
 
             if (!authContainer) return;
 
-            // Safety catch: If we are in the middle of logging out, freeze all sync updates to prevent corruption
             if (sessionStorage.getItem('is_logging_out_active_flag') === 'true') {
                 return;
             }
@@ -393,62 +387,59 @@
                 userBar.classList.remove('hidden');
                 userDisplay.innerText = `Logged in as: ${user.email || user.displayName}`;
 
-                // Fetch data from Firestore
                 db.collection("users").doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists && doc.data().userData) {
                             appData = doc.data().userData;
                             console.log("☁️ Data successfully downloaded from Firestore!");
-                            renderFileSystemViewCanvas();
                         } else {
-                            // If cloud database is empty, see if they had work in progress offline to migrate
                             const localRaw = localStorage.getItem('ap_planner_v1_data');
                             if (localRaw) {
                                 try {
                                     const localData = JSON.parse(localRaw);
                                     if (localData.folders && localData.folders.length > 0) {
                                         appData = localData;
-                                        console.log("🌱 Migrating your offline folders to your cloud account...");
                                     }
                                 } catch(e) { console.error(e); }
                             }
-                            // Lock it down to the database immediately
                             saveAllStateData();
-                            renderFileSystemViewCanvas();
                         }
+                        // Update UI with cloud data sync values
+                        syncInvestigationUI();
+                        renderFileSystemViewCanvas();
                     })
                     .catch((error) => console.error("Cloud download error:", error));
             } else {
                 authContainer.classList.remove('hidden');
                 userBar.classList.add('hidden');
                 
-                // For signed-out guests, look for basic local storage defaults
                 loadAllStateData();
+                syncInvestigationUI();
                 renderFileSystemViewCanvas();
             }
         });
 
         // --- LIFECYCLE DOM SETUP ENGINE ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Let the Auth Listener manage state loading automatically
             setupImageFileReaders();
             
             const siText = document.getElementById('si-text');
-            const savedInquiry = getSavedValue('ap_sustained_investigation_v2') || '';
-            siText.value = savedInquiry;
-            updateLiveSIDisplay(savedInquiry);
-
             siText.addEventListener('input', (e) => {
-                saveValue('ap_sustained_investigation_v2', e.target.value);
+                appData.sustainedInvestigation = e.target.value;
                 updateLiveSIDisplay(e.target.value);
+                saveAllStateData(); // Triggers live auto-save to cloud on type!
             });
         });
 
+        function syncInvestigationUI() {
+            const inquiryValue = appData.sustainedInvestigation || "";
+            document.getElementById('si-text').value = inquiryValue;
+            updateLiveSIDisplay(inquiryValue);
+        }
+
         function saveAllStateData() {
-            // Keep saving to localStorage as a structural fallback
             localStorage.setItem('ap_planner_v1_data', JSON.stringify(appData));
 
-            // Sync structural parameters to the cloud database
             const user = auth.currentUser;
             if (user) {
                 db.collection("users").doc(user.uid).set({
@@ -460,15 +451,11 @@
         }
 
         function loadAllStateData() {
-            // FIX: Match unified key string targets
-            const raw = getSavedValue('ap_planner_v1_data');
+            const raw = localStorage.getItem('ap_planner_v1_data');
             if (raw) {
                 try { appData = JSON.parse(raw); } catch(e) { console.error(e); }
             }
         }
-
-        function saveValue(key, val) { try { localStorage.setItem(key, val); } catch(e) { window[key] = val; } }
-        function getSavedValue(key) { try { return localStorage.getItem(key); } catch(e) { return window[key] || null; } }
 
         function updateLiveSIDisplay(textValue) {
             const displayBox = document.getElementById('si-display-box');
