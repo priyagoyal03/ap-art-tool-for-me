@@ -347,6 +347,7 @@
         }
 
         // 5. Automatic Sync Listener Engine
+        // 5. Automatic Sync Listener Engine
         auth.onAuthStateChanged((user) => {
             const authContainer = document.getElementById('auth-container');
             const userBar = document.getElementById('user-bar');
@@ -362,8 +363,14 @@
                     .then((doc) => {
                         if (doc.exists && doc.data().userData) {
                             appData = doc.data().userData;
-                            renderFileSystemViewCanvas();
+                            console.log("☁️ Cloud data found! Loading your folders...");
+                        } else {
+                            // If it's a brand new account with no cloud data yet, clear the board
+                            appData = { folders: [] };
+                            console.log("🌱 New profile initialized on the cloud.");
                         }
+                        // CRITICAL FIX: Tell the page to draw your folders on the screen!
+                        renderFileSystemViewCanvas();
                     })
                     .catch((error) => console.error("Cloud download error:", error));
             } else {
@@ -403,11 +410,11 @@
             });
         });
 
-        function saveAllStateData() {
+       function saveAllStateData() {
             // Keep saving to localStorage as a fallback backup
             localStorage.setItem('ap_planner_v1_data', JSON.stringify(appData));
 
-            // NEW: If a user is securely logged into Firebase, save it to their cloud database account too!
+            // LINK TO CLOUD: Save directly to the logged-in user's account
             const user = auth.currentUser;
             if (user) {
                 db.collection("users").doc(user.uid).set({
