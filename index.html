@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AP Art Portfolio Planner</title>
+    <title>AP Art Helper</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +20,7 @@
             --font-subheadings: 'Jim Nightshade', cursive;
             --font-body: 'Alice', Georgia, serif;
 
-            /* PASTE YOUR IMAGE LINK HERE INSIDE THE QUOTES */
+           
             --bg-image-url: url('castle-background.jpg');
 
             --text-main: #260808;      
@@ -38,16 +41,21 @@
             font-family: var(--font-body) !important;
             background-image: var(--bg-image-url) !important;
             background-size: cover !important;        
-            background-position: center !important;    
+            
+            /* CHANGE THIS LINE: */
+            background-position: 50% 20% !important; 
+            
             background-attachment: fixed !important;  
             color: var(--text-main) !important;
         }
 
         /* TEXT CANVAS LAYER PANELS */
+        /* TEXT CANVAS LAYER PANELS */
         main {
-            background-color: rgba(249, 248, 246, 0.92); 
+            background-color: rgba(249, 248, 246, 0.555); 
             padding: 2rem;
-            margin-top: 2rem;
+            /* CHANGE THIS LINE TO PUSH THE PLANNER DOWN */
+            margin-top: 2rem; 
             box-shadow: 6px 6px 0px var(--text-main);
             border: 3px solid var(--text-main);
         }
@@ -72,6 +80,10 @@
             font-size: 2.25rem !important;
             letter-spacing: 0.05em;
             color: var(--text-main) !important;
+        }
+
+        a {
+            color: #ffffff !important;
         }
 
         .accent-hub {
@@ -105,32 +117,73 @@
     </style>
 </head>
 <body class="min-h-screen pb-12 text-stone-900">
-
     <header class="bg-white py-6 px-8 mb-8 shadow-sm text-center">
-        <h1 class="tracking-wide">Ap Art Portfolio Planner</h1>
+        <h1 class="tracking-wide">Ap Art Helper</h1>
     </header>
+    <div id="auth-container" class="max-w-xl mx-auto my-4 p-6 bg-white/95 border-3 border-stone-900 shadow-[6px_6px_0px_#260808] hidden">
+        <h2 class="text-2xl font-bold mb-4 font-serif text-center" id="auth-title">Sign In to Cloud Sync</h2>
+        
+        <div class="space-y-3">
+            <button type="button" onclick="handleGoogleLogin()" class="w-full flex items-center justify-center gap-3 bg-white border-2 border-stone-900 text-stone-900 font-bold py-2 hover:bg-stone-50 transition-colors cursor-pointer shadow-[2px_2px_0px_#260808]">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" class="w-5 h-5">
+                Continue with Google
+            </button>
+
+            <div class="relative flex py-2 items-center">
+                <div class="flex-grow border-t border-stone-300"></div>
+                <span class="flex-shrink mx-4 text-xs font-bold text-stone-400 uppercase">Or use password</span>
+                <div class="flex-grow border-t border-stone-300"></div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider mb-1 text-stone-900">Email Address</label>
+                <input type="email" id="auth-email" class="w-full p-2 border border-stone-400 bg-stone-50 text-stone-900" placeholder="artist@school.edu">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider mb-1 text-stone-900">Password</label>
+                <input type="password" id="auth-password" class="w-full p-2 border border-stone-400 bg-stone-50 text-stone-900" placeholder="••••••••">
+            </div>
+            
+            <div class="flex flex-col space-y-2 pt-2">
+                <button type="button" onclick="handleEmailLogin()" class="w-full bg-stone-900 text-white font-medium py-2 hover:bg-stone-800 transition-colors cursor-pointer">
+                    Log In with Email
+                </button>
+                <button type="button" onclick="handleEmailSignUp()" class="w-full border-2 border-stone-900 text-stone-900 font-medium py-2 hover:bg-stone-100 transition-colors cursor-pointer">
+                    Create New Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-bar" class="max-w-4xl mx-auto px-4 py-2 flex justify-end items-center gap-4 text-sm hidden">
+        <span id="user-display-email" class="font-medium bg-white/80 px-2 py-1 border border-stone-300 text-stone-900"></span>
+        <button type="button" onclick="handleSignOut()" class="text-red-700 hover:underline font-bold cursor-pointer">Sign Out</button>
+    </div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+   
+    
         
         <section class="mb-8">
             <div class="bg-white p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 accent-hub">
                 <div class="flex-1">
                     <h2 class="mb-1 flex items-center gap-2">
-                        ✨ Central Sustained Investigation Inquiry
+                       Sustained Investigation
                     </h2>
                     <div id="si-display-box" class="text-sm italic whitespace-pre-wrap leading-relaxed bg-stone-50 border border-stone-200 p-4 min-h-[4.5rem]">
-                        No central inquiry question recorded yet. Click the edit button to write your core theme.
+                        No investigation question yet. Click the edit button to write one.
                     </div>
                 </div>
                 <button onclick="openSustainedInvestigation()" class="btn-action px-5 py-3 text-sm font-medium cursor-pointer self-start md:self-auto flex items-center gap-2 whitespace-nowrap">
-                     🖋️ Edit Inquiry
+                     Edit
                 </button>
             </div>
         </section>
 
         <section class="mb-6 flex items-center justify-between border-b-2 border-stone-300 pb-3">
             <div class="flex items-center gap-2 text-sm font-medium">
-                <span onclick="navigateToRootDirectory()" class="cursor-pointer hover:underline text-stone-500">📂 Root</span>
+                <span onclick="navigateToRootDirectory()" class="cursor-pointer hover:underline text-stone-500">Root</span>
                 <span id="nav-breadcrumb-separator" class="text-stone-400 hidden">/</span>
                 <span id="nav-breadcrumb-current" class="text-stone-900 font-bold"></span>
             </div>
@@ -140,7 +193,7 @@
                 + New Folder
             </button>
             <button id="add-artwork-action-btn" onclick="openNewArtPieceInActiveFolder()" class="btn-action font-medium text-sm px-4 py-2 cursor-pointer hidden">
-                + Add Art Piece
+                + Add Art
             </button>
             
         </section>
@@ -148,19 +201,26 @@
         <section id="directory-canvas-view"></section>
     </main>
 
+     <footer class="text-center mt-8 mb-4">
+
+            <a href="https://www.flaticon.com/free-icons/files-and-folders" title="files and folders icons" target="_blank" class="hover:text-stone-900 hover:underline transition-colors">
+                Files and folders icons created by Gajah Mada - Flaticon
+            </a>
+    </footer>
+
     <div id="art-modal" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8 relative border-4 border-stone-900">
             <button type="button" onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl font-light cursor-pointer">&times;</button>
             
-            <h2 id="modal-slot-title" class="mb-6 text-stone-900">Edit Collection Item</h2>
+            <h2 id="modal-slot-title" class="mb-6 text-stone-900">Edit Item</h2>
             
             <form id="art-form" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Upload Visual Work</label>
+                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Upload Image</label>
                     <div id="image-upload-wrapper" class="border-2 border-dashed border-stone-300 p-4 text-center bg-stone-50/50 h-52 flex items-center justify-center relative group">
                         
                         <button type="button" id="clear-image-btn" onclick="clearAttachedImage(event)" class="absolute top-2 right-2 bg-red-700 hover:bg-red-800 text-white text-xs px-2.5 py-1 z-30 hidden transition-colors">
-                            🗑️ Delete Image
+                            Delete Image
                         </button>
 
                         <input type="file" id="art-image-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
@@ -183,7 +243,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">Description / Conceptual Intent</label>
+                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">Description</label>
                     <textarea id="art-description" rows="3" class="w-full border border-stone-400 px-3 py-2 text-sm focus:outline-none focus:border-stone-900"></textarea>
                 </div>
 
@@ -198,7 +258,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Color Palette Theory</label>
+                    <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Color Palette</label>
                     <div id="color-palette-container" class="flex flex-wrap gap-3 items-center"></div>
                 </div>
 
@@ -225,6 +285,93 @@
     </div>
 
     <script>
+        // 1. Paste your unique Firebase Configuration here:
+        const firebaseConfig = {
+        apiKey: "AIzaSyBCjQrFtBNianqeST3Qw0C-Idt_Hzo_vls",
+        authDomain: "ap-art-helper.firebaseapp.com",
+        projectId: "ap-art-helper",
+        storageBucket: "ap-art-helper.firebasestorage.app",
+        messagingSenderId: "1024969908647",
+        appId: "1:1024969908647:web:810583ec164b4251b95682"
+        };
+
+        // 2. Initialize Firebase services
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- FIREBASE ACCOUNT LOGIC LINKS ---
+
+        // 1. Google Sign-In Function
+        function handleGoogleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    alert(`Welcome, ${result.user.displayName}! Cloud sync is active.`);
+                })
+                .catch((error) => alert("Google sign-in failed: " + error.message));
+        }
+
+        // 2. Email Sign Up
+        function handleEmailSignUp() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return alert("Please fill out both fields!");
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    alert("Account created! Syncing your current layout layout...");
+                    saveAllStateData();
+                })
+                .catch((error) => alert("Sign up error: " + error.message));
+        }
+
+        // 3. Email Login
+        function handleEmailLogin() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return alert("Please fill out both fields!");
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => alert("Login error: " + error.message));
+        }
+
+        // 4. Sign Out
+        function handleSignOut() {
+            if(confirm("Sign out? Data won't cloud-sync until you log back in.")) {
+                auth.signOut().then(() => {
+                    localStorage.removeItem('ap_planner_v1_data');
+                    location.reload();
+                });
+            }
+        }
+
+        // 5. Automatic Sync Listener Engine
+        auth.onAuthStateChanged((user) => {
+            const authContainer = document.getElementById('auth-container');
+            const userBar = document.getElementById('user-bar');
+            const userDisplay = document.getElementById('user-display-email');
+
+            if (user) {
+                authContainer.classList.add('hidden');
+                userBar.classList.remove('hidden');
+                userDisplay.innerText = `Logged in as: ${user.email}`;
+
+                // Fetch cloud records automatically
+                db.collection("users").doc(user.uid).get()
+                    .then((doc) => {
+                        if (doc.exists && doc.data().userData) {
+                            appData = doc.data().userData;
+                            renderFileSystemViewCanvas();
+                        }
+                    })
+                    .catch((error) => console.error("Cloud download error:", error));
+            } else {
+                authContainer.classList.remove('hidden');
+                userBar.classList.add('hidden');
+            }
+        });
+        
         let appData = {
             folders: [
                 {
@@ -257,7 +404,18 @@
         });
 
         function saveAllStateData() {
-            saveValue('ap_art_workspace_master_dataset', JSON.stringify(appData));
+            // Keep saving to localStorage as a fallback backup
+            localStorage.setItem('ap_planner_v1_data', JSON.stringify(appData));
+
+            // NEW: If a user is securely logged into Firebase, save it to their cloud database account too!
+            const user = auth.currentUser;
+            if (user) {
+                db.collection("users").doc(user.uid).set({
+                    userData: appData
+                })
+                .then(() => console.log("Data synced securely to Firebase Cloud!"))
+                .catch((error) => console.error("Error syncing cloud data: ", error));
+            }
         }
 
         function loadAllStateData() {
@@ -325,7 +483,7 @@
                     }
 
                     itemNode.innerHTML = `
-                        <div class="w-16 h-16 flex items-center justify-center text-5xl mb-2 filter drop-shadow-sm group-hover:drop-shadow-md">📁</div>
+                        <img src="folder.png" alt="Folder" class="w-16 h-16 object-contain mb-2 filter drop-shadow-sm group-hover:drop-shadow-md" />
                         ${nameLabelMarkup}
                     `;
                     iconGrid.appendChild(itemNode);
