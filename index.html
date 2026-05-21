@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AP Art Helper</title>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -136,7 +137,26 @@
                 <label class="block text-xs font-bold uppercase tracking-wider mb-1 text-stone-900">Password</label>
                 <input type="password" id="auth-password" class="w-full p-2 border border-stone-400 bg-stone-50 text-stone-900" placeholder="••••••••">
             </div>
-            
+            <section class="mb-8">
+                    <div class="bg-white p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 accent-hub">
+                        <div class="flex-1">
+                            <h2 class="mb-1 flex items-center gap-2">
+                               Sustained Investigation
+                            </h2>
+                            <div id="si-display-box" class="text-sm italic whitespace-pre-wrap leading-relaxed bg-stone-50 border border-stone-200 p-4 min-h-[4.5rem]">
+                                No investigation question yet. Click the edit button to write one.
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 self-start md:self-auto">
+                            <button onclick="openSustainedInvestigation()" class="btn-action px-5 py-3 text-sm font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
+                                 Edit Inquiry
+                            </button>
+                            <button onclick="exportPortfolioToPNG()" class="btn-action px-5 py-3 text-sm font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap bg-amber-950">
+                                 📸 Export Portfolio view to PNG
+                            </button>
+                        </div>
+                    </div>
+                </section>
             <div class="flex flex-col space-y-2 pt-2">
                 <button type="button" onclick="handleEmailLogin()" class="w-full bg-stone-900 text-white font-medium py-2 hover:bg-stone-800 transition-colors cursor-pointer">
                     Log In with Email
@@ -714,6 +734,47 @@
         }
 
         // Complete View Canvas Render Function
+    function exportPortfolioToPNG() {
+    // Select the main canvas element holding your portfolio artwork or folder views
+    const targetElement = document.getElementById('directory-canvas-view');
+    
+    if (!targetElement || targetElement.children.length === 0 || targetElement.innerText.includes("This folder is empty")) {
+        alert("Please navigate into a folder with artwork pieces before exporting!");
+        return;
+    }
+
+    // Temporarily change style rules if background image causes clipping issues during capture
+    const options = {
+        useCORS: true,       // Allows loading external asset URLs safely
+        scale: 2,            // Doubles the resolution for crisp, high-quality images
+        backgroundColor: null // Keeps transparency if needed, or matches background
+    };
+
+    alert("Generating your high-res PNG file... Please hold on a brief second.");
+
+    html2canvas(targetElement, options).then((canvas) => {
+        // Convert canvas layout to image file stream data
+        const imagePayload = canvas.toDataURL("image/png");
+        
+        // Create an invisible virtual anchor tag to trigger a native browser download
+        const downloadAnchor = document.createElement('a');
+        
+        // Name the file dynamically based on folder state
+        const folder = appData.folders.find(f => f.id === currentOpenFolderId);
+        const folderName = folder ? folder.name.replace(/\s+/g, '_') : 'AP_Art_Workspace';
+        
+        downloadAnchor.download = `${folderName}_portfolio_export.png`;
+        downloadAnchor.href = imagePayload;
+        
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        document.body.removeChild(downloadAnchor);
+    }).catch(err => {
+        console.error("Export failure:", err);
+        alert("Something went wrong compiling the canvas elements into a PNG file.");
+    });
+}
+        
         function renderFileSystemViewCanvas() {
             const canvas = document.getElementById('directory-canvas-view');
             const breadcrumbSep = document.getElementById('nav-breadcrumb-separator');
