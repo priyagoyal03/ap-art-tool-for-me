@@ -662,19 +662,47 @@
         }
 
         // --- EXPORT TO PNG LOGIC ---
-        function exportPortfolioToPNG() {
-            const targetElement = document.getElementById('directory-canvas-view');
-            
-            if (!targetElement || targetElement.children.length === 0 || targetElement.innerText.includes("Empty Slot")) {
-                alert("Please navigate into a folder containing active artwork snapshots before running your workspace rendering card compilation export!");
-                return;
-            }
+        function publishIndividualImages() {
+    // 1. Locate the current folder data matrix
+    const currentFolder = appData.folders.find(f => f.id === currentOpenFolderId);
+    
+    if (!currentFolder) {
+        alert("Please navigate into a workspace folder before publishing images!");
+        return;
+    }
 
-            const options = {
-                useCORS: true,
-                scale: 2, // Doubles resolution for crisp text print quality
-                backgroundColor: "#f5f5f4" // Neutral stone backdrop canvas match
-            };
+    // 2. Filter out slots that actually contain artwork images
+    const activeItems = Object.entries(currentFolder.items).filter(([slotKey, item]) => item && item.image);
+
+    if (activeItems.length === 0) {
+        alert("This folder doesn't have any images uploaded yet to publish!");
+        return;
+    }
+
+    if (!confirm(`Ready to export? Your browser will download ${activeItems.length} separate artwork image files.`)) {
+        return;
+    }
+
+    // 3. Loop through each artwork piece and trigger an individual download anchor
+    activeItems.forEach(([slotKey, item], index) => {
+        // Set a slight delay between downloads so the browser doesn't block them as spam triggers
+        setTimeout(() => {
+            const downloadAnchor = document.createElement('a');
+            
+            // Format a clean file name using the slot number and artwork title
+            const slotNumber = slotKey.replace('slot-', '');
+            const sanitizedTitle = (item.title || 'Untitled_Work').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const folderName = currentFolder.name.replace(/\s+/g, '_');
+            
+            downloadAnchor.download = `Slot${slotNumber}_${sanitizedTitle}.png`;
+            downloadAnchor.href = item.image; // Direct image data payload payload
+            
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+        }, index * 400); // 400ms interval staging prevents browser window lockups
+    });
+}
 
             html2canvas(targetElement, options).then((canvas) => {
                 const imagePayload = canvas.toDataURL("image/png");
