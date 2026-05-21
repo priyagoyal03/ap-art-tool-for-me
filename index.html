@@ -125,10 +125,10 @@
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2 self-start md:self-auto">
                     <button onclick="openSustainedInvestigation()" class="btn-action px-5 py-3 text-sm font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
-                         Edit Inquiry
+                         Edit
                     </button>
                     <button onclick="publishFolderAsZIP()" class="btn-action px-5 py-3 text-sm font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap bg-amber-950">
-                         📦 Publish Folder Layout (.ZIP Archive)
+                         Publish All (.ZIP Archive)
                     </button>
                 </div>
             </div>
@@ -143,10 +143,10 @@
            
             <div class="flex items-center gap-3">
                 <button id="export-project-btn" onclick="exportDataToJSONFile()" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs px-3 py-2 border border-stone-400 transition-colors cursor-pointer">
-                    ⬇️ Export Project File
+                    Export Project File
                 </button>
                 <label id="import-project-label" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs px-3 py-2 border border-stone-400 transition-colors cursor-pointer">
-                    ⚙️ Import Backup
+                    Import Backup
                     <input type="file" id="project-import-input" accept=".json" onchange="importDataFromJSONFile(event)" class="hidden">
                 </label>
                 
