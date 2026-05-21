@@ -35,7 +35,6 @@
             border-radius: 0px !important;
         }
 
-        /* APPLICATION BACKGROUND IMAGE SCALING ENGINE */
         body {
             font-family: var(--font-body) !important;
             background-image: var(--bg-image-url) !important;
@@ -45,7 +44,6 @@
             color: var(--text-main) !important;
         }
 
-        /* TEXT CANVAS LAYER PANELS */
         main {
             background-color: rgba(249, 248, 246, 0.555); 
             padding: 2rem;
@@ -114,7 +112,6 @@
     <header class="bg-white py-6 px-8 mb-8 shadow-sm text-center">
         <h1 class="tracking-wide">Ap Art Helper</h1>
     </header>
-
     <div id="auth-container" class="max-w-xl mx-auto my-4 p-6 bg-white/95 border-3 border-stone-900 shadow-[6px_6px_0px_#260808] hidden">
         <h2 class="text-2xl font-bold mb-4 font-serif text-center" id="auth-title">Sign In to Cloud Sync</h2>
         
@@ -203,14 +200,14 @@
             <h2 id="modal-slot-title" class="mb-6 text-stone-900">Edit Item</h2>
             
             <form id="art-form" class="space-y-6">
-               <div>
+                <div>
                     <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Upload Image</label>
                     <div id="image-upload-wrapper" class="border-2 border-dashed border-stone-300 p-4 text-center bg-stone-50/50 h-52 flex items-center justify-center relative group">
                         
                         <button type="button" id="clear-image-btn" onclick="clearAttachedImage(event)" class="absolute top-2 right-2 bg-red-700 hover:bg-red-800 text-white text-xs px-2.5 py-1 z-30 hidden transition-colors">
                             Delete Image
                         </button>
-                
+
                         <input type="file" id="art-image-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
                         
                         <div id="image-preview-container" class="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -276,8 +273,9 @@
             </div>
         </div>
     </div>
-<script>
-        // 1. Unique Firebase Configuration:
+
+    <script>
+        // 1. Firebase Configuration:
         const firebaseConfig = {
             apiKey: "AIzaSyBCjQrFtBNianqeST3Qw0C-Idt_Hzo_vls",
             authDomain: "ap-art-helper.firebaseapp.com",
@@ -327,7 +325,7 @@
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(() => {
-                    alert("Account created! Syncing your layout configurations...");
+                    alert("Account created! Syncing your current layout layout...");
                     saveAllStateData();
                 })
                 .catch((error) => alert("Sign up error: " + error.message));
@@ -342,7 +340,6 @@
                 .catch((error) => alert("Login error: " + error.message));
         }
 
-        // REPAIRED SIGN OUT MECHANISM
         function handleSignOut() {
             if (confirm("Sign out? Data won't cloud-sync until you log back in.")) {
                 sessionStorage.setItem('is_logging_out_active_flag', 'true');
@@ -374,7 +371,6 @@
             }
         }
 
-        // Automatic Sync Engine Pipeline
         auth.onAuthStateChanged((user) => {
             const authContainer = document.getElementById('auth-container');
             const userBar = document.getElementById('user-bar');
@@ -460,7 +456,7 @@
             }
         }
 
-        // NEW: Image Compression Engine to bypass the Firebase Storage paywall screen entirely
+        // REPAIRED: Image Compression Algorithm (Keeps files tiny for Firestore)
         function compressImagePayload(base64Str, maxWidth = 750, maxHeight = 750, quality = 0.6) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -494,6 +490,7 @@
             });
         }
 
+        // REPAIRED: Updated File Input Reader with Automatic Live KB Calculation Size Monitor
         function setupImageFileReaders() {
             const fileInput = document.getElementById('art-image-input');
             if (!fileInput) return;
@@ -504,7 +501,7 @@
                     fileReaderInstance.onload = async function(eventResult) {
                         const rawBase64 = eventResult.target.result;
                         
-                        // Run compression instantly on selection
+                        // Compress instantly
                         const compressedBase64 = await compressImagePayload(rawBase64);
 
                         const previewContainer = document.getElementById('image-preview-container');
@@ -512,6 +509,22 @@
                         
                         previewContainer.dataset.transientBaseString = compressedBase64;
                         document.getElementById('clear-image-btn').classList.remove('hidden');
+
+                        // REPAIRED: Live text calculation calculations
+                        const sizeInKB = Math.round(compressedBase64.length / 1024);
+                        const sizeDisplay = document.getElementById('data-size-display');
+                        const sizeWarning = document.getElementById('data-size-warning');
+                        
+                        if (sizeDisplay) {
+                            sizeDisplay.innerText = `Estimated Size: ${sizeInKB} KB`;
+                            if (sizeInKB > 600) {
+                                sizeDisplay.className = "text-amber-600 font-bold";
+                                if (sizeWarning) sizeWarning.classList.remove('hidden');
+                            } else {
+                                sizeDisplay.className = "text-stone-500 font-semibold";
+                                if (sizeWarning) sizeWarning.classList.add('hidden');
+                            }
+                        }
                     };
                     fileReaderInstance.readAsDataURL(targetFile);
                 }
@@ -531,6 +544,15 @@
             
             previewContainer.dataset.transientBaseString = "REMOVE_CURRENT_IMAGE_STATE";
             clearBtn.classList.add('hidden');
+
+            // Reset UI readout indicators
+            const sizeDisplay = document.getElementById('data-size-display');
+            const sizeWarning = document.getElementById('data-size-warning');
+            if (sizeDisplay) {
+                sizeDisplay.innerText = "Estimated Size: 0 KB";
+                sizeDisplay.className = "text-stone-500 font-semibold";
+            }
+            if (sizeWarning) sizeWarning.classList.add('hidden');
         }
 
         function updateLiveSIDisplay(textValue) {
@@ -750,9 +772,17 @@
             if (item.image) {
                 previewContainer.innerHTML = `<img src="${item.image}" class="max-h-full max-w-full object-contain" />`;
                 clearBtn.classList.remove('hidden'); 
+
+                // Calculate size of existing artwork image string if present
+                const sizeInKB = Math.round(item.image.length / 1024);
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = `Estimated Size: ${sizeInKB} KB`;
             } else {
                 previewContainer.innerHTML = `<span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>`;
                 clearBtn.classList.add('hidden');
+                
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = "Estimated Size: 0 KB";
             }
 
             renderColorPaletteSwatches(item.colors);
@@ -798,69 +828,4 @@
 
             const appendSwatchBtn = document.createElement('button');
             appendSwatchBtn.type = 'button';
-            appendSwatchBtn.className = 'w-10 h-10 border-2 border-dashed border-stone-400 text-stone-400 hover:border-stone-900 hover:text-stone-900 flex items-center justify-center text-sm font-bold cursor-pointer';
-            appendSwatchBtn.innerText = '+';
-            appendSwatchBtn.onclick = () => {
-                colorsList.push('#cbd5e1');
-                renderColorPaletteSwatches(colorsList);
-            };
-            container.appendChild(appendSwatchBtn);
-        }
-
-        function closeModal() {
-            document.getElementById('art-modal').classList.add('hidden');
-            document.getElementById('art-modal').classList.remove('flex');
-            document.getElementById('art-image-input').value = '';
-            delete document.getElementById('image-preview-container').dataset.transientBaseString;
-            activeSlotKey = null;
-        }
-
-        function openSustainedInvestigation() {
-            document.getElementById('si-modal').classList.remove('hidden');
-            document.getElementById('si-modal').classList.add('flex');
-        }
-
-        function closeSIModal() {
-            document.getElementById('si-modal').classList.add('hidden');
-            document.getElementById('si-modal').classList.remove('flex');
-            updateLiveSIDisplay(document.getElementById('si-text').value);
-        }
-
-        document.getElementById('art-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!currentOpenFolderId || !activeSlotKey) return;
-
-            const folderIndex = appData.folders.findIndex(f => f.id === currentOpenFolderId);
-            if (folderIndex === -1) return;
-
-            const activeFormColors = Array.from(document.querySelectorAll('#color-palette-container input[type="color"]')).map(input => input.value);
-            const imagePreviewNode = document.getElementById('image-preview-container').querySelector('img');
-            const fileInputBufferString = document.getElementById('image-preview-container').dataset.transientBaseString;
-
-            let finalImagePayload = null;
-            if (fileInputBufferString === "REMOVE_CURRENT_IMAGE_STATE") {
-                finalImagePayload = null; 
-            } else if (fileInputBufferString) {
-                finalImagePayload = fileInputBufferString; 
-            } else if (imagePreviewNode) {
-                finalImagePayload = imagePreviewNode.src; 
-            }
-
-            appData.folders[folderIndex].items[activeSlotKey] = {
-                title: document.getElementById('art-title').value.trim(),
-                materials: document.getElementById('art-materials').value.trim(),
-                description: document.getElementById('art-description').value.trim(),
-                investigation: document.getElementById('art-investigation-rel').value.trim(),
-                other: document.getElementById('art-other').value.trim(),
-                colors: activeFormColors,
-                image: finalImagePayload
-            };
-
-            saveAllStateData();
-            renderFileSystemViewCanvas();
-            closeModal();
-        });
-    </script>
-    
-</body>
-</html>
+            appendSwatchBtn.className = 'w-10 h-10 border-2 border-dashed border-stone-400 text-stone-400 hover:border-stone-900
