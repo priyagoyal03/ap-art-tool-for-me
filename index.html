@@ -788,4 +788,130 @@
                 previewContainer.innerHTML = `<img src="${item.image}" class="max-h-full max-w-full object-contain" />`;
                 clearBtn.classList.remove('hidden'); 
 
-                const sizeIn
+                const sizeInKB = Math.round(item.image.length / 1024);
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = `Original Size: ${sizeInKB} KB`;
+            } else {
+                previewContainer.innerHTML = `<span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>`;
+                clearBtn.classList.add('hidden');
+                
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = "Original Size: 0 KB";
+            }
+
+            renderColorPaletteSwatches(item.colors);
+
+            const displayModal = document.getElementById('art-modal');
+            displayModal.classList.remove('hidden');
+            displayModal.classList.add('flex');
+        }
+
+        function renderColorPaletteSwatches(colorsList) {
+            const container = document.getElementById('color-palette-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            colorsList.forEach((hexColor, index) => {
+                const pickerWrapper = document.createElement('div');
+                pickerWrapper.className = 'relative flex items-center group';
+
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.value = hexColor.startsWith('#') && hexColor.length === 7 ? hexColor : '#cbd5e1';
+                colorInput.className = 'w-10 h-10 cursor-pointer border border-stone-400 p-0 overflow-hidden';
+                
+                colorInput.addEventListener('change', (e) => {
+                    colorsList[index] = e.target.value;
+                });
+
+                const deleteSwatchBtn = document.createElement('button');
+                deleteSwatchBtn.type = 'button';
+                deleteSwatchBtn.className = 'absolute -top-2 -right-2 bg-red-700 hover:bg-red-800 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm cursor-pointer';
+                deleteSwatchBtn.innerText = '×';
+                
+                deleteSwatchBtn.onclick = (e) => {
+                    e.preventDefault();
+                    colorsList.splice(index, 1);
+                    renderColorPaletteSwatches(colorsList);
+                };
+
+                pickerWrapper.appendChild(colorInput);
+                pickerWrapper.appendChild(deleteSwatchBtn);
+                container.appendChild(pickerWrapper);
+            });
+
+            const appendSwatchBtn = document.createElement('button');
+            appendSwatchBtn.type = 'button';
+            appendSwatchBtn.className = 'w-10 h-10 border-2 border-dashed border-stone-400 text-stone-400 hover:border-stone-900 hover:text-stone-900 flex items-center justify-center text-sm font-bold cursor-pointer';
+            appendSwatchBtn.innerText = '+';
+            appendSwatchBtn.onclick = () => {
+                colorsList.push('#cbd5e1');
+                renderColorPaletteSwatches(colorsList);
+            };
+            container.appendChild(appendSwatchBtn);
+        }
+
+        function closeModal() {
+            document.getElementById('art-modal').classList.add('hidden');
+            document.getElementById('art-modal').classList.remove('flex');
+            document.getElementById('art-image-input').value = '';
+            delete document.getElementById('image-preview-container').dataset.transientBaseString;
+            activeSlotKey = null;
+
+            const sizeDisplay = document.getElementById('data-size-display');
+            const sizeWarning = document.getElementById('data-size-warning');
+            if (sizeDisplay) {
+                sizeDisplay.innerText = "Original Size: 0 KB";
+                sizeDisplay.className = "text-stone-500 font-semibold";
+            }
+            if (sizeWarning) sizeWarning.classList.add('hidden');
+        }
+
+        function openSustainedInvestigation() {
+            document.getElementById('si-modal').classList.remove('hidden');
+            document.getElementById('si-modal').classList.add('flex');
+        }
+
+        function closeSIModal() {
+            document.getElementById('si-modal').classList.add('hidden');
+            document.getElementById('si-modal').classList.remove('flex');
+            updateLiveSIDisplay(document.getElementById('si-text').value);
+        }
+
+        document.getElementById('art-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!currentOpenFolderId || !activeSlotKey) return;
+
+            const folderIndex = appData.folders.findIndex(f => f.id === currentOpenFolderId);
+            if (folderIndex === -1) return;
+
+            const activeFormColors = Array.from(document.querySelectorAll('#color-palette-container input[type="color"]')).map(input => input.value);
+            const imagePreviewNode = document.getElementById('image-preview-container').querySelector('img');
+            const fileInputBufferString = document.getElementById('image-preview-container').dataset.transientBaseString;
+
+            let finalImagePayload = null;
+            if (fileInputBufferString === "REMOVE_CURRENT_IMAGE_STATE") {
+                finalImagePayload = null; 
+            } else if (fileInputBufferString) {
+                finalImagePayload = fileInputBufferString; 
+            } else if (imagePreviewNode) {
+                finalImagePayload = imagePreviewNode.src; 
+            }
+
+            appData.folders[folderIndex].items[activeSlotKey] = {
+                title: document.getElementById('art-title').value.trim(),
+                materials: document.getElementById('art-materials').value.trim(),
+                description: document.getElementById('art-description').value.trim(),
+                investigation: document.getElementById('art-investigation-rel').value.trim(),
+                other: document.getElementById('art-other').value.trim(),
+                colors: activeFormColors,
+                image: finalImagePayload
+            };
+
+            saveAllStateData();
+            renderFileSystemViewCanvas();
+            closeModal();
+        });
+    </script>
+</body>
+</html>
