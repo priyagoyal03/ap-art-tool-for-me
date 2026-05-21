@@ -346,31 +346,45 @@
             }
         }
 
+        
         // 5. Automatic Sync Listener Engine
-        // 5. Automatic Sync Listener Engine
+        // Automatic Sync Listener Engine
         auth.onAuthStateChanged((user) => {
             const authContainer = document.getElementById('auth-container');
             const userBar = document.getElementById('user-bar');
             const userDisplay = document.getElementById('user-display-email');
 
+            if (!authContainer) return; 
+
             if (user) {
                 authContainer.classList.add('hidden');
                 userBar.classList.remove('hidden');
-                userDisplay.innerText = `Logged in as: ${user.email}`;
+                userDisplay.innerText = `Logged in as: ${user.email || user.displayName}`;
 
-                // Fetch cloud records automatically
+                // Fetch cloud records automatically from Firestore
                 db.collection("users").doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists && doc.data().userData) {
+                            // 1. If they have cloud data, load it!
                             appData = doc.data().userData;
-                            console.log("☁️ Cloud data found! Loading your folders...");
+                            console.log("☁️ Data successfully downloaded from Firestore!");
+                            renderFileSystemViewCanvas();
                         } else {
-                            // If it's a brand new account with no cloud data yet, clear the board
-                            appData = { folders: [] };
-                            console.log("🌱 New profile initialized on the cloud.");
+                            // 2. If the cloud is empty, check if they have local folders right now
+                            const localRaw = localStorage.getItem('ap_planner_v1_data');
+                            if (localRaw) {
+                                try {
+                                    const localData = JSON.parse(localRaw);
+                                    if (localData.folders && localData.folders.length > 0) {
+                                        appData = localData;
+                                        console.log("🌱 Found local data! Migrating it to your cloud profile...");
+                                    }
+                                } catch(e) { console.error(e); }
+                            }
+                            // Push whatever data we have up to your new Firebase cloud document
+                            saveAllStateData();
+                            renderFileSystemViewCanvas();
                         }
-                        // CRITICAL FIX: Tell the page to draw your folders on the screen!
-                        renderFileSystemViewCanvas();
                     })
                     .catch((error) => console.error("Cloud download error:", error));
             } else {
