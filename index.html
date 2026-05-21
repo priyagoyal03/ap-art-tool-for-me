@@ -310,7 +310,18 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        let appData = {
+       let appData = {
+            sustainedInvestigation: "", 
+            folders: [
+                {
+                    id: "ap-portfolio-default-system-id",
+                    name: "AP Art Portfolio Stuff",
+                    isDefaultAP: true,
+                    maxSlots: 15, // Reverted to 15 slots as requested
+                    items: {}
+                }
+            ]
+        }; let appData = {
             sustainedInvestigation: "", 
             folders: [
                 {
