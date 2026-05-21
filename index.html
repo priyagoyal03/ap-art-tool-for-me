@@ -478,44 +478,97 @@
 
         let isExporting = false;
 
-        function exportDataToJSONFile() {
+        async function exportDataToJSONFile() {
             isExporting = true; 
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "ap_art_helper_backup.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            
-            setTimeout(() => { isExporting = false; }, 1000);
-        }
+            alert("Compiling text data and embedded local image assets into your project backup file... Please wait.");
 
-        window.addEventListener('beforeunload', function (e) {
-            if (!isExporting) {
-                e.preventDefault();
-                e.returnValue = 'Make sure you have exported your latest data!';
-                return 'Make sure you have exported your latest data!';
+            try {
+                // Deep copy the text nodes structure
+                const exportBundle = JSON.parse(JSON.stringify(appData));
+
+                // Traverse the folders and slots to extract high-res images from localforage
+                for (let folder of exportBundle.folders) {
+                    for (let slotKey of Object.keys(folder.items)) {
+                        const item = folder.items[slotKey];
+                        if (item && item.hasLocalImage) {
+                            const imageStoreKey = `${folder.id}_${slotKey}`;
+                            // Grab the raw binary base64 string from IndexedDB
+                            const base64Data = await localforage.getItem(imageStoreKey);
+                            if (base64Data) {
+                                // Embed the image directly into the export package temporarily
+                                item.embeddedExportImageRaw = base64Data;
+                            }
+                        }
+                    }
+                }
+
+                // Generate and trigger download anchor
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportBundle));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `ap_art_helper_full_backup_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+
+            } catch (err) {
+                console.error("Export Error: ", err);
+                alert("An error occurred extracting image assets for export.");
+            } finally {
+                setTimeout(() => { isExporting = false; }, 1000);
             }
-        });
+        }
 
         function importDataFromJSONFile(event) {
             const selectedFile = event.target.files[0];
             if (!selectedFile) return;
 
             const fileReaderInstance = new FileReader();
-            fileReaderInstance.onload = function(e) {
+            fileReaderInstance.onload = async function(e) {
                 try {
                     const parsedProjectData = JSON.parse(e.target.result);
-                    if (parsedProjectData && parsedProjectData.folders) {
-                        if (confirm("Import backup file? This replaces your layout details.")) {
-                            appData = parsedProjectData;
-                            saveAllStateData();
-                            syncInvestigationUI();
-                            renderFileSystemViewCanvas();
+                    if (!parsedProjectData || !parsedProjectData.folders) {
+                        throw new Error("Invalid format");
+                    }
+
+                    if (!confirm("Import backup file? This will replace your current workspace and re-insert image binaries.")) {
+                        return;
+                    }
+
+                    alert("Processing bundle and writing image streams back to local database shelf...");
+
+                    // Extract and unpack images into localforage
+                    for (let folder of parsedProjectData.folders) {
+                        for (let slotKey of Object.keys(folder.items)) {
+                            const item = folder.items[slotKey];
+                            const imageStoreKey = `${folder.id}_${slotKey}`;
+
+                            if (item && item.embeddedExportImageRaw) {
+                                // Save image binary back to IndexedDB local shelf
+                                await localforage.setItem(imageStoreKey, item.embeddedExportImageRaw);
+                                // Delete temporary property so it doesn't clutter runtime memory
+                                delete item.embeddedExportImageRaw;
+                            }
                         }
                     }
-                } catch (err) { alert("Invalid backup format."); }
+
+                    // Update live global application text layout properties
+                    appData = parsedProjectData;
+                    
+                    // Save cleaned state, update views
+                    saveAllStateData();
+                    syncInvestigationUI();
+                    renderFileSystemViewCanvas();
+                    
+                    alert("Import successful! Workspace and portfolio assets restored.");
+
+                } catch (err) { 
+                    console.error("Import Error: ", err);
+                    alert("Invalid backup project format or file corruption encountered."); 
+                } finally {
+                    // Clear file input element target value
+                    event.target.value = '';
+                }
             };
             fileReaderInstance.readAsText(selectedFile);
         }
