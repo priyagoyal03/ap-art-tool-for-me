@@ -784,6 +784,11 @@
             
             previewContainer.dataset.transientBaseString = "REMOVE_CURRENT_IMAGE_STATE";
             clearBtn.classList.add('hidden');
+
+            // NEW: Reset size display
+            document.getElementById('data-size-display').innerText = "Estimated Size: 0 KB";
+            document.getElementById('data-size-display').className = "text-stone-500 font-semibold";
+            document.getElementById('data-size-warning').classList.add('hidden');
         }
 
         function renderColorPaletteSwatches(colorsList) {
