@@ -424,6 +424,12 @@
                 try { appData = JSON.parse(raw); } catch(e) { console.error(e); }
             }
         }
+        window.addEventListener('beforeunload', function (e) {
+            // This triggers the browser's native "Leave site?" confirmation dialog
+            e.preventDefault();
+            e.returnValue = 'Wait! Did you export your latest work?';
+            return 'Wait! Did you export your latest work?';
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             setupImageFileReaders();
