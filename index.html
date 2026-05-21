@@ -340,7 +340,28 @@
         function handleSignOut() {
             if(confirm("Sign out? Data won't cloud-sync until you log back in.")) {
                 auth.signOut().then(() => {
+                    // 1. Completely wipe the local storage memory slot
                     localStorage.removeItem('ap_planner_v1_data');
+                    
+                    // 2. Clear out the active memory variables entirely
+                    appData = {
+                        folders: [
+                            {
+                                id: "ap-portfolio-default-system-id",
+                                name: "AP Art Portfolio Stuff",
+                                isDefaultAP: true,
+                                maxSlots: 15,
+                                items: {}
+                            }
+                        ]
+                    };
+                    currentOpenFolderId = null;
+                    activeSlotKey = null;
+
+                    // 3. Clear out the Sustained Investigation text box memory
+                    localStorage.removeItem('ap_sustained_investigation_v2');
+
+                    // 4. Force a clean page refresh to reset the UI completely
                     location.reload();
                 });
             }
