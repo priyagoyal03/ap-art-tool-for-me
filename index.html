@@ -439,6 +439,10 @@
                 saveAllStateData(); 
             });
         });
+        let isExporting = false;
+
+    // Update your export function to trigger this
+        
 
         function syncInvestigationUI() {
             const inquiryValue = appData.sustainedInvestigation || "";
@@ -495,16 +499,24 @@
             }
         }
 
-        function exportDataToJSONFile() {
-            const dataBlob = new Blob([JSON.stringify(appData, null, 2)], { type: "application/json" });
-            const urlLink = URL.createObjectURL(dataBlob);
-            const tempAnchor = document.createElement("a");
-            tempAnchor.href = urlLink;
-            tempAnchor.download = `ap-art-portfolio-backup-${Date.now()}.json`;
-            document.body.appendChild(tempAnchor);
-            tempAnchor.click();
-            document.body.removeChild(tempAnchor);
-        }
+let isExporting = false;
+
+// Update your export function to trigger this
+function exportDataToJSONFile() {
+    isExporting = true; 
+    // ... your existing export logic ...
+    
+    // Reset it after a short delay
+    setTimeout(() => { isExporting = false; }, 1000);
+}
+
+// Modify the listener to check the state
+window.addEventListener('beforeunload', function (e) {
+    if (!isExporting) {
+        e.preventDefault();
+        e.returnValue = 'Make sure you have exported your latest data!';
+    }
+});
 
         function importDataFromJSONFile(event) {
             const selectedFile = event.target.files[0];
