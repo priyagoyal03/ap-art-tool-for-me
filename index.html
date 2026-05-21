@@ -35,7 +35,6 @@
             border-radius: 0px !important;
         }
 
-        /* APPLICATION BACKGROUND IMAGE SCALING ENGINE */
         body {
             font-family: var(--font-body) !important;
             background-image: var(--bg-image-url) !important;
@@ -45,7 +44,6 @@
             color: var(--text-main) !important;
         }
 
-        /* TEXT CANVAS LAYER PANELS */
         main {
             background-color: rgba(249, 248, 246, 0.555); 
             padding: 2rem;
@@ -217,6 +215,11 @@
                             <span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>
                         </div>
                     </div>
+                    
+                    <div class="mt-1.5 flex justify-between items-center text-xs font-semibold text-stone-500">
+                        <span id="data-size-display">Estimated Size: 0 KB</span>
+                        <span id="data-size-warning" class="text-red-600 hidden">⚠️ Reaching cloud document limits!</span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -273,7 +276,7 @@
     </div>
 
     <script>
-        // 1. Core Firebase Config Details
+        // 1. Firebase Setup configuration link
         const firebaseConfig = {
             apiKey: "AIzaSyBCjQrFtBNianqeST3Qw0C-Idt_Hzo_vls",
             authDomain: "ap-art-helper.firebaseapp.com",
@@ -283,13 +286,14 @@
             appId: "1:1024969908647:web:810583ec164b4251b95682"
         };
 
-        // 2. Initialize Firebase services
+        // 2. Initializing services 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // 3. Global Datasets Architecture 
+        // 3. Application State Data Blueprint
         let appData = {
+            sustainedInvestigation: "", 
             folders: [
                 {
                     id: "ap-portfolio-default-system-id",
@@ -304,8 +308,7 @@
         let currentOpenFolderId = null; 
         let activeSlotKey = null;
 
-        // --- FIREBASE ACCOUNT LOGIC LINKS ---
-
+        // --- ACCOUNT HANDLERS ---
         function handleGoogleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider)
@@ -322,7 +325,7 @@
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(() => {
-                    alert("Account created! Syncing your layout configurations...");
+                    alert("Account created! Syncing configurations...");
                     saveAllStateData();
                 })
                 .catch((error) => alert("Sign up error: " + error.message));
@@ -338,82 +341,101 @@
         }
 
         function handleSignOut() {
-            if(confirm("Sign out? Data won't cloud-sync until you log back in.")) {
+            if (confirm("Sign out? Data won't cloud-sync until you log back in.")) {
+                sessionStorage.setItem('is_logging_out_active_flag', 'true');
+
                 auth.signOut().then(() => {
                     localStorage.removeItem('ap_planner_v1_data');
+
+                    appData = {
+                        sustainedInvestigation: "",
+                        folders: [
+                            {
+                                id: "ap-portfolio-default-system-id",
+                                name: "AP Art Portfolio Stuff",
+                                isDefaultAP: true,
+                                maxSlots: 15,
+                                items: {}
+                            }
+                        ]
+                    };
+                    currentOpenFolderId = null;
+                    activeSlotKey = null;
+
+                    sessionStorage.removeItem('is_logging_out_active_flag');
                     location.reload();
+                }).catch((error) => {
+                    console.error("Sign out error:", error);
+                    sessionStorage.removeItem('is_logging_out_active_flag');
                 });
             }
         }
 
-        // Automatic Sync Engine Pipeline
+        // --- BACKGROUND AUTOMATIC CLOUD SYNC PIPELINE ---
         auth.onAuthStateChanged((user) => {
             const authContainer = document.getElementById('auth-container');
             const userBar = document.getElementById('user-bar');
             const userDisplay = document.getElementById('user-display-email');
 
             if (!authContainer) return;
+            if (sessionStorage.getItem('is_logging_out_active_flag') === 'true') return;
 
             if (user) {
                 authContainer.classList.add('hidden');
                 userBar.classList.remove('hidden');
                 userDisplay.innerText = `Logged in as: ${user.email || user.displayName}`;
 
-                // Fetch data from Firestore
                 db.collection("users").doc(user.uid).get()
                     .then((doc) => {
                         if (doc.exists && doc.data().userData) {
                             appData = doc.data().userData;
                             console.log("☁️ Data successfully downloaded from Firestore!");
-                            renderFileSystemViewCanvas();
                         } else {
-                            // If cloud is empty, scan for existing offline work to migrate safely
                             const localRaw = localStorage.getItem('ap_planner_v1_data');
                             if (localRaw) {
                                 try {
                                     const localData = JSON.parse(localRaw);
                                     if (localData.folders && localData.folders.length > 0) {
                                         appData = localData;
-                                        console.log("🌱 Migrating your offline folders to your new profile container...");
                                     }
                                 } catch(e) { console.error(e); }
                             }
                             saveAllStateData();
-                            renderFileSystemViewCanvas();
                         }
+                        syncInvestigationUI();
+                        renderFileSystemViewCanvas();
                     })
                     .catch((error) => console.error("Cloud download error:", error));
             } else {
                 authContainer.classList.remove('hidden');
                 userBar.classList.add('hidden');
                 
-                // Load local configuration keys for unsigned users
                 loadAllStateData();
+                syncInvestigationUI();
                 renderFileSystemViewCanvas();
             }
         });
 
-        // --- LIFECYCLE DOM SETUP ENGINE ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Let the Auth Listener manage state loading automatically
             setupImageFileReaders();
             
             const siText = document.getElementById('si-text');
-            const savedInquiry = getSavedValue('ap_sustained_investigation_v2') || '';
-            siText.value = savedInquiry;
-            updateLiveSIDisplay(savedInquiry);
-
             siText.addEventListener('input', (e) => {
-                saveValue('ap_sustained_investigation_v2', e.target.value);
+                appData.sustainedInvestigation = e.target.value;
                 updateLiveSIDisplay(e.target.value);
+                saveAllStateData(); 
             });
         });
 
+        function syncInvestigationUI() {
+            const inquiryValue = appData.sustainedInvestigation || "";
+            document.getElementById('si-text').value = inquiryValue;
+            updateLiveSIDisplay(inquiryValue);
+        }
+
         function saveAllStateData() {
-            // Keep saving to localStorage as a structural fallback
             localStorage.setItem('ap_planner_v1_data', JSON.stringify(appData));
 
-            // Sync structural parameters to the cloud database
             const user = auth.currentUser;
             if (user) {
                 db.collection("users").doc(user.uid).set({
@@ -425,15 +447,109 @@
         }
 
         function loadAllStateData() {
-            // FIX: Match unified key string targets
-            const raw = getSavedValue('ap_planner_v1_data');
+            const raw = localStorage.getItem('ap_planner_v1_data');
             if (raw) {
                 try { appData = JSON.parse(raw); } catch(e) { console.error(e); }
             }
         }
 
-        function saveValue(key, val) { try { localStorage.setItem(key, val); } catch(e) { window[key] = val; } }
-        function getSavedValue(key) { try { return localStorage.getItem(key); } catch(e) { return window[key] || null; } }
+        // COMPRESSION ENGINE: Automatically turns massive canvas files into optimized payloads
+        function compressImagePayload(base64Str, maxWidth = 750, maxHeight = 750, quality = 0.6) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = function () {
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedBase64);
+                };
+            });
+        }
+
+        // CALCULATOR ENGINE: Runs compression on drop and outputs correct live size metrics
+        function setupImageFileReaders() {
+            const fileInput = document.getElementById('art-image-input');
+            if (!fileInput) return;
+            fileInput.addEventListener('change', (e) => {
+                const targetFile = e.target.files[0];
+                if (targetFile) {
+                    const fileReaderInstance = new FileReader();
+                    fileReaderInstance.onload = async function(eventResult) {
+                        const rawBase64 = eventResult.target.result;
+                        
+                        // Compress instantly
+                        const compressedBase64 = await compressImagePayload(rawBase64);
+
+                        const previewContainer = document.getElementById('image-preview-container');
+                        previewContainer.innerHTML = `<img src="${compressedBase64}" class="max-h-full max-w-full object-contain" />`;
+                        
+                        previewContainer.dataset.transientBaseString = compressedBase64;
+                        document.getElementById('clear-image-btn').classList.remove('hidden');
+
+                        // Calculate size accurately
+                        const sizeInKB = Math.round(compressedBase64.length / 1024);
+                        const sizeDisplay = document.getElementById('data-size-display');
+                        const sizeWarning = document.getElementById('data-size-warning');
+                        
+                        if (sizeDisplay) {
+                            sizeDisplay.innerText = `Estimated Size: ${sizeInKB} KB`;
+                            if (sizeInKB > 600) {
+                                sizeDisplay.className = "text-amber-600 font-bold";
+                                if (sizeWarning) sizeWarning.classList.remove('hidden');
+                            } else {
+                                sizeDisplay.className = "text-stone-500 font-semibold";
+                                if (sizeWarning) sizeWarning.className = "hidden";
+                            }
+                        }
+                    };
+                    fileReaderInstance.readAsDataURL(targetFile);
+                }
+            });
+        }
+
+        function clearAttachedImage(event) {
+            event.stopPropagation(); 
+            if (!confirm("Remove the image file attached to this art piece?")) return;
+
+            const previewContainer = document.getElementById('image-preview-container');
+            const fileInput = document.getElementById('art-image-input');
+            const clearBtn = document.getElementById('clear-image-btn');
+
+            previewContainer.innerHTML = `<span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>`;
+            fileInput.value = '';
+            
+            previewContainer.dataset.transientBaseString = "REMOVE_CURRENT_IMAGE_STATE";
+            clearBtn.classList.add('hidden');
+
+            const sizeDisplay = document.getElementById('data-size-display');
+            const sizeWarning = document.getElementById('data-size-warning');
+            if (sizeDisplay) {
+                sizeDisplay.innerText = "Estimated Size: 0 KB";
+                sizeDisplay.className = "text-stone-500 font-semibold";
+            }
+            if (sizeWarning) sizeWarning.classList.add('hidden');
+        }
 
         function updateLiveSIDisplay(textValue) {
             const displayBox = document.getElementById('si-display-box');
@@ -457,10 +573,10 @@
             canvas.innerHTML = '';
 
             if (currentOpenFolderId === null) {
-                breadcrumbSep.classList.add('hidden');
-                breadcrumbCurrent.innerText = '';
-                addFolderBtn.classList.remove('hidden');
-                addArtBtn.classList.add('hidden');
+                if (breadcrumbSep) breadcrumbSep.classList.add('hidden');
+                if (breadcrumbCurrent) breadcrumbCurrent.innerText = '';
+                if (addFolderBtn) addFolderBtn.classList.remove('hidden');
+                if (addArtBtn) addArtBtn.classList.add('hidden');
 
                 const iconGrid = document.createElement('div');
                 iconGrid.className = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-8 p-4';
@@ -502,10 +618,10 @@
                 const folder = appData.folders.find(f => f.id === currentOpenFolderId);
                 if (!folder) { navigateToRootDirectory(); return; }
 
-                breadcrumbSep.classList.remove('hidden');
-                breadcrumbCurrent.innerText = folder.name;
-                addFolderBtn.classList.add('hidden');
-                addArtBtn.classList.toggle('hidden', folder.isDefaultAP); 
+                if (breadcrumbSep) breadcrumbSep.classList.remove('hidden');
+                if (breadcrumbCurrent) breadcrumbCurrent.innerText = folder.name;
+                if (addFolderBtn) addFolderBtn.classList.add('hidden');
+                if (addArtBtn) addArtBtn.classList.toggle('hidden', folder.isDefaultAP); 
 
                 const artGrid = document.createElement('div');
                 artGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 p-2';
@@ -521,7 +637,7 @@
                     if (keys.length === 0) {
                         canvas.innerHTML = `
                             <div class="py-12 text-center text-sm text-stone-400 italic">
-                                This file folder directory is currently empty. Click "+ Add Art Piece" to add media items.
+                                This folder is empty. Click "+ Add Art" to begin.
                             </div>
                         `;
                         return;
@@ -615,7 +731,7 @@
         }
 
         function deleteCustomWorkspaceFolder(folderId) {
-            if (!confirm("Delete this workspace folder directory and all enclosed visual artwork files completely?")) return;
+            if (!confirm("Delete this folder and all enclosed artwork files completely?")) return;
             appData.folders = appData.folders.filter(f => f.id !== folderId);
             saveAllStateData();
             renderFileSystemViewCanvas();
@@ -652,9 +768,16 @@
             if (item.image) {
                 previewContainer.innerHTML = `<img src="${item.image}" class="max-h-full max-w-full object-contain" />`;
                 clearBtn.classList.remove('hidden'); 
+
+                const sizeInKB = Math.round(item.image.length / 1024);
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = `Estimated Size: ${sizeInKB} KB`;
             } else {
                 previewContainer.innerHTML = `<span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>`;
                 clearBtn.classList.add('hidden');
+                
+                const sizeDisplay = document.getElementById('data-size-display');
+                if (sizeDisplay) sizeDisplay.innerText = "Estimated Size: 0 KB";
             }
 
             renderColorPaletteSwatches(item.colors);
@@ -662,39 +785,6 @@
             const displayModal = document.getElementById('art-modal');
             displayModal.classList.remove('hidden');
             displayModal.classList.add('flex');
-        }
-
-        function setupImageFileReaders() {
-            const fileInput = document.getElementById('art-image-input');
-            if (!fileInput) return;
-            fileInput.addEventListener('change', (e) => {
-                const targetFile = e.target.files[0];
-                if (targetFile) {
-                    const fileReaderInstance = new FileReader();
-                    fileReaderInstance.onload = function(eventResult) {
-                        const previewContainer = document.getElementById('image-preview-container');
-                        previewContainer.innerHTML = `<img src="${eventResult.target.result}" class="max-h-full max-w-full object-contain" />`;
-                        previewContainer.dataset.transientBaseString = eventResult.target.result;
-                        document.getElementById('clear-image-btn').classList.remove('hidden');
-                    };
-                    fileReaderInstance.readAsDataURL(targetFile);
-                }
-            });
-        }
-
-        function clearAttachedImage(event) {
-            event.stopPropagation(); 
-            if (!confirm("Are you sure you want to remove the image file attached to this art piece?")) return;
-
-            const previewContainer = document.getElementById('image-preview-container');
-            const fileInput = document.getElementById('art-image-input');
-            const clearBtn = document.getElementById('clear-image-btn');
-
-            previewContainer.innerHTML = `<span class="text-sm text-stone-400">Click or drag image file here to attach artwork</span>`;
-            fileInput.value = '';
-            
-            previewContainer.dataset.transientBaseString = "REMOVE_CURRENT_IMAGE_STATE";
-            clearBtn.classList.add('hidden');
         }
 
         function renderColorPaletteSwatches(colorsList) {
@@ -748,6 +838,14 @@
             document.getElementById('art-image-input').value = '';
             delete document.getElementById('image-preview-container').dataset.transientBaseString;
             activeSlotKey = null;
+
+            const sizeDisplay = document.getElementById('data-size-display');
+            const sizeWarning = document.getElementById('data-size-warning');
+            if (sizeDisplay) {
+                sizeDisplay.innerText = "Estimated Size: 0 KB";
+                sizeDisplay.className = "text-stone-500 font-semibold";
+            }
+            if (sizeWarning) sizeWarning.classList.add('hidden');
         }
 
         function openSustainedInvestigation() {
